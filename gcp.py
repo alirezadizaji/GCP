@@ -36,20 +36,25 @@ def tt_to_tensor(U):
 
     return oe.contract(*contract)
 
-
-
-seed = rnd.PRNGKey(0)
-N = 4
-d = jnp.array([2, 3, 4, 5])
-r = 2
-U = [rnd.normal(key=seed, shape=(d[i], r)) for i in range(N)]
-T = cp_to_tensor(U)
-
-
-
 @jit
-def objective(U, T):
-    return jnp.sum(L.loss_fun(cp_to_tensor(U), T))
+def objective(U, T, mask):
+    return jnp.sum(L.loss_fun(cp_to_tensor(U), T) * mask) / jnp.sum(mask)
+
+
+def generate_data(N, d, r, seed=None, dist='normal'):
+
+    if dist == 'normal':
+        T = rnd.normal(key=seed, shape=d)
+        U = [rnd.normal(key=seed, shape=(d[i], r)) for i in range(N)]
+    elif dist == 'gamma':
+        T = rnd.gamma(key=seed, a=0.1, shape=d)
+        U = [rnd.normal(key=seed, shape=(d[i], r)) for i in range(N)]
+    elif dist == 'bernoulli':
+        T = rnd.bernoulli(key=seed, p=0.5, shape=d).astype(jnp.float32)
+        U = [rnd.normal(key=seed, shape=(d[i], r)) for i in range(N)]
+    else:
+        raise ValueError('Invalid distribution')
+    return T, U
 
 
 
@@ -57,40 +62,71 @@ seed = rnd.PRNGKey(0)
 N = 4
 d = jnp.array([2, 3, 4, 5])
 assert N == len(d)
-r = 2
+r = 20
 
 num_iters = 1000
 loss = np.zeros(num_iters)
 lr = 0.01
 
-T = rnd.normal(key=seed, shape=d)
-U = [rnd.uniform(key=seed, shape=(d[i], r)) for i in range(N)]
-for i in tqdm.trange(num_iters):
-    # Compute gradient
-    gradU = jax.grad(objective)(U, T)
+# Clear the JIT cache and choose the loss function
+dist = 'normal'
+jax.clear_caches()
+if dist == 'normal':
+    L.loss_fun = L.normal
+elif dist == 'gamma':
+    L.loss_fun = L.gamma
+elif dist == 'bernoulli':
+    L.loss_fun = L.bernoulli_logit
 
-    # Update U using gradient descent
-    U = jax.tree_map(lambda x, g: x - lr * g, U, gradU)
+# Generate mask
+mask = 1 - rnd.bernoulli(key=seed, shape=d, p=0.1).astype(jnp.float32)
 
-    loss[i] = objective(U, T)
-
-fig, ax = plt.subplots()
-ax.plot(loss)
-
-
-
-N = 4
-d = jnp.array([2, 3, 4, 5])
-r = jnp.array([2, 6, 20, 5])
-U = [None] * N
-U[0] = rnd.normal(key=seed, shape=(d[0], r[0]))
-for i in range(1, N-1):
-    U[i] = rnd.normal(key=seed, shape=(r[i-1], d[i], r[i]))
-U[-1] = rnd.normal(key=seed, shape=(r[-2], d[-1]))
-
-T = tt_to_tensor(U)
+# Generate T and initialize U for different distributions
+T, U = generate_data(N, d, r, seed=seed, dist=dist)
 
 
+# # Projected gradient descent (constrained optimization)
+# projection = jaxopt.projection.projection_non_negative
+# pg_solver = jaxopt.ProjectedGradient(fun=objective, projection=projection, maxiter=num_iters, tol=1e-5, verbose=True)
+# res = pg_solver.run(U, T=T, mask=mask)
 
-print()
+# Gradient descent (unconstrained)
+gd_solver = jaxopt.GradientDescent(fun=objective, stepsize=lr, maxiter=num_iters, tol=1e-5, verbose=True)
+res = gd_solver.run(U, T, mask)
 
+# Get results
+U_hat = res.params
+state = res.state
+
+# Compute error
+error = objective(U_hat, T, mask)
+
+print(error)
+
+# mask = 1 - rnd.bernoulli(key=seed, shape=d, p=0.0).astype(jnp.float32)
+# T = rnd.normal(key=seed, shape=d)
+# U = [rnd.normal(key=seed, shape=(d[i], r)) for i in range(N)]
+# for i in tqdm.trange(num_iters):
+#     # Compute gradient
+#     gradU = jax.grad(objective)(U, T, mask)
+
+#     # Update U using gradient descent
+#     U = jax.tree_map(lambda x, g: x - lr * g, U, gradU)
+
+#     loss[i] = objective(U, T, mask)
+
+# fig, ax = plt.subplots()
+# ax.plot(loss)
+
+
+
+# N = 4
+# d = jnp.array([2, 3, 4, 5])
+# r = jnp.array([2, 6, 20, 5])
+# U = [None] * N
+# U[0] = rnd.normal(key=seed, shape=(d[0], r[0]))
+# for i in range(1, N-1):
+#     U[i] = rnd.normal(key=seed, shape=(r[i-1], d[i], r[i]))
+# U[-1] = rnd.normal(key=seed, shape=(r[-2], d[-1]))
+
+# T = tt_to_tensor(U)
