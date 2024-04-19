@@ -39,7 +39,7 @@ def bernoulli_logit(m, x):
     return jnp.log(1 + jnp.exp(m)) - x * m
 
 @jit
-def negbinom(m, x, r, eps=1e-10):
+def negative_binomial(m, x, r, eps=1e-10):
     return (r + x) * jnp.log(1 + m) - x * jnp.log(m + eps)
 
 
