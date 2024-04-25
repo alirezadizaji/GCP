@@ -23,7 +23,7 @@ def weibull(m, x, eps=1e-10):
     return jnp.log(m + eps) + (m + eps) * jnp.log(x + eps) - (x / (m + eps)) ** (m + eps)
 
 @jit
-def poison_linear(m, x, eps=1e-10):
+def poisson_linear(m, x, eps=1e-10):
     return m - x * jnp.log(m + eps)
 
 @jit
@@ -39,7 +39,7 @@ def bernoulli_logit(m, x):
     return jnp.log(1 + jnp.exp(m)) - x * m
 
 @jit
-def negative_binomial(m, x, r, eps=1e-10):
+def negative_binomial(m, x, r=2, eps=1e-10):
     return (r + x) * jnp.log(1 + m) - x * jnp.log(m + eps)
 
 
