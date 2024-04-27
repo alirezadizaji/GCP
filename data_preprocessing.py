@@ -64,6 +64,7 @@ def process_ocn(filedir: str, num_active_users: Optional[int] = None):
     density = data.sum() / data.size
     print(f"Density of data with shape {data.shape} is {density*100:.3f}%.", flush=True)
 
+    return data
 
 if __name__ == "__main__":
     filedir = "ocnodeslinks.txt"
