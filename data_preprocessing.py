@@ -68,4 +68,5 @@ def process_ocn(filedir: str, num_active_users: Optional[int] = None):
 
 if __name__ == "__main__":
     filedir = "ocnodeslinks.txt"
+    filedir = 'http://opsahl.co.uk/tnet/datasets/OCnodeslinks.txt'
     process_ocn(filedir, num_active_users=200)

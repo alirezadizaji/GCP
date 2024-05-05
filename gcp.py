@@ -119,9 +119,9 @@ def generate_data(M, dist='normal', decomp='cp', seed=None):
     elif 'poisson' in dist:
         X = rng.poisson(lam=theta)
     elif 'bernoulli' in dist:
-        X = rng.binomial(n=1, p=theta, size=d).astype(np.float32)
+        X = rng.binomial(n=1, p=theta).astype(np.float32)
     elif dist == 'negative_binomial':
-        X = rng.negative_binomial(n=2, p=theta, size=d)
+        X = rng.negative_binomial(n=2, p=theta)
     else:
         raise ValueError('Invalid distribution')
     return X

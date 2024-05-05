@@ -14,6 +14,10 @@ import gcp
 
 
 def experiment(N, d, r, percent_missing=None, num_iters=1000, num_samples=10, lr=0.01, seed=0):
+
+    # Set the random seed
+    rng = rnd.default_rng(seed)
+
     if percent_missing is None:
         # percent_missing = np.array([0.1, 0.5, 0.8])
         percent_missing = np.arange(10) / 10
@@ -28,30 +32,31 @@ def experiment(N, d, r, percent_missing=None, num_iters=1000, num_samples=10, lr
         init_factors = gcp.init_tt
         compose = gcp.tt_to_tensor
 
-
-    dist_list = ['normal', 'poisson_linear', 'bernoulli_logit']
+    # dist_list = [
+    #     'normal',
+    #     'gamma',
+    #     'rayleigh',
+    #     'poisson_linear',
+    #     'poisson_log',
+    #     'bernoulli_odds',
+    #     'bernoulli_logit',
+    #     'negative_binomial',
+    # ]
+    # dist_list = ['normal', 'poisson_linear', 'bernoulli_logit']
+    dist_list = ['poisson_linear', 'normal', 'bernoulli_logit']
     results = {}
     for dist in dist_list:
         results[dist] = np.zeros([num_samples, num_missing])
 
-    # results = dict(
-    #     normal = np.zeros([num_samples, num_missing]),
-    #     gamma = np.zeros([num_samples, num_missing]),
-    #     rayleigh = np.zeros([num_samples, num_missing]),
-    #     poisson_linear = np.zeros([num_samples, num_missing]),
-    #     poisson_log = np.zeros([num_samples, num_missing]),
-    #     bernoulli_odds = np.zeros([num_samples, num_missing]),
-    #     bernoulli_logit = np.zeros([num_samples, num_missing]),
-    #     negative_binomial = np.zeros([num_samples, num_missing]),
-    # )
+    # Generate distribution parameters
+    U = init_factors(d, r, seed=rng)
+    Mtrue = compose(U)
+    results['Mtrue'] = Mtrue
 
-    rng = rnd.default_rng(seed)
-    for dist in tqdm.tqdm(results.keys()):
+    for dist in tqdm.tqdm(dist_list):
         # Clear the JIT cache and choose the loss function
         jax.clear_caches()
         L.loss_fun = getattr(L, dist)
-        U = init_factors(d, r, seed=rng)
-        Mtrue = compose(U)
         for i in tqdm.trange(num_samples, leave=False):
             # Generate tensor X for different distributions
             X = gcp.generate_data(Mtrue, decomp=decomp, seed=rng, dist=dist)
@@ -90,7 +95,7 @@ lr = 0.01
 # r = jnp.array([2, 2, 2, 2])  # Low-rank
 
 percent_missing = np.arange(10) / 10
-num_samples = 100
+num_samples = 10
 
 rng = rnd.default_rng(seed)
 mask = 1 - rng.binomial(n=1, p=percent_missing[0], size=d).astype(np.float32)
@@ -98,7 +103,7 @@ mask = 1 - rng.binomial(n=1, p=percent_missing[0], size=d).astype(np.float32)
 r_cp = 4
 results_cp = experiment(N, d, r_cp, percent_missing=percent_missing, num_samples=num_samples, lr=lr, seed=seed)
 
-r_tt = jnp.array([2, 2, 2, 2])  # Low-rank
+r_tt = jnp.array([2, 2, 2])  # Low-rank
 results_tt = experiment(N, d, r_tt, percent_missing=percent_missing, num_samples=num_samples, lr=lr, seed=seed)
 
 np.savez(

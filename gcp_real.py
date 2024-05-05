@@ -13,13 +13,14 @@ import gcp as G
 from data_preprocessing import process_ocn
 
 if __name__ == '__main__':
+    url = 'http://opsahl.co.uk/tnet/datasets/OCnodeslinks.txt'
     parser = ArgumentParser(description='Data completion task using GCP and GTT on OCN dataset.')
-    parser.add_argument('-f', '--filedir', required=True, type=str, help='OCN file directory.')
-    parser.add_argument('-r', '--rank', type=int, nargs="+", help='Factorization rank.')
+    parser.add_argument('-f', '--filedir', default=url, type=str, help='OCN file directory.')
+    parser.add_argument('-r', '--rank', default=5, type=int, nargs="+", help='Factorization rank.')
     parser.add_argument('-m', '--mask-ratio', type=float, nargs="+", help='Mask ratios to apply on the input to run data completion task.')
     parser.add_argument('-j', '--obj-func', type=str, nargs="+")
     parser.add_argument('-d', '--dist', type=str, nargs="+")
-    parser.add_argument('-s', '--save-dir', type=str, required=True)
+    parser.add_argument('-s', '--save-dir', type=str, default='results')
     args = parser.parse_args()
     print("## Args ##")
     print(' '.join(f'{k}={v}' for k, v in vars(args).items()))
